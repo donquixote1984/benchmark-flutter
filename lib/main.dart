@@ -1,6 +1,9 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
-import "package:intl/intl.dart";
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
 void main() => runApp(new MyApp());
 
 class MyApp extends StatelessWidget {
@@ -10,46 +13,96 @@ class MyApp extends StatelessWidget {
     return new MaterialApp(
       title: 'ticker',
       home: new Scaffold(
-        appBar: new AppBar(
-          title: new Text('Ticker'),
-        ),
-
-        body: new TimeLabel(),
-      ),
+        appBar: new AppBar(),
+        body: new BookList(),
+      )
     );
   }
+
 }
 
-class TimeLabel extends StatefulWidget {
-
+class BookList extends StatefulWidget {
   @override
     State<StatefulWidget> createState() {
       // TODO: implement createState
-      return new TimeState();
+      return new BookListState();
     }
 }
 
-class TimeState extends State {
+class BookListState extends State {
 
-  DateTime _time = new DateTime.now();
-  DateFormat _f = new DateFormat('yyyy-MM-dd H:m:ss');
-
+  var _countries = new List<Country>();
   @override
-  initState() {
-    super.initState();
-    
-     Timer.periodic(new Duration(microseconds: 20), (Timer t) {
+    void initState() {
+      // TODO: implement initState
+      super.initState();
+
+      _fetchBooks();
+    }
+
+    _fetchBooks() async{
+      final response = await http.get('https://jsonplaceholder.typicode.com/photos');
+      List countries = JSON.decode(response.body);
+
       setState(() {
-        _time = new DateTime.now();
+              this._countries = countries.map<Country>((c) {
+                  return Country.fromJson(c);
+              }).toList();
       });
-    }); 
+    }
+  @override
+    Widget build(BuildContext context) {
+      // TODO: implement build
+      var size = this._countries.length;
+      return new Container(
+        child: new GridView.count(
+          crossAxisCount: 2,
+          children: this._countries.map<Widget>((c) { return CountryCard.from(c);}).toList()
+        )
+      );
+    }
+}
+
+class CountryCard extends StatelessWidget {
+  final Country country;
+  CountryCard({this.country});
+
+  factory CountryCard.from(country) {
+    return new CountryCard(country: country);
   }
   @override
     Widget build(BuildContext context) {
       // TODO: implement build
-      var time = _f.format(_time) + ' ' + _time.millisecond.toString();
-      return new Center(
-        child: new Text(time)
+      return new Stack(
+        children: [
+          Image.network(this.country.image),
+          Positioned(
+            child: new Text(this.country.name),
+            left:10.0,
+            bottom: 10.0
+          ),
+          Positioned(
+            child: new RaisedButton(
+              onPressed: () {print(this.country.name);},
+              child:new Icon(Icons.thumb_up) 
+              ),
+            right: 10.0,
+            top: 10.0
+          )
+        ]
       );
     }
+}
+class Country {
+  final String image;
+  final String name;
+
+  Country({this.name, this.image});
+
+  factory Country.fromJson(Map json) {
+    return new Country(
+      image: json['url'],
+      name: json['title']
+    );
+  }
 }
